@@ -1,0 +1,48 @@
+:root {
+  --md-primary-fg-color: #183b4e;
+  --md-primary-fg-color--light: #2b6078;
+  --md-primary-fg-color--dark: #102b3a;
+  --md-accent-fg-color: #008c82;
+}
+
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset h2 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.55rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0.3rem 0.8rem rgba(16, 43, 58, 0.09);
+}
+
+.mfdro-hero {
+  margin: 0.5rem 0 1.6rem;
+  padding: 1.5rem 1.65rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(0, 140, 130, 0.09), rgba(24, 59, 78, 0.05));
+}
+
+.mfdro-hero p {
+  max-width: 46rem;
+  font-size: 1.05rem;
+}
+
+.mfdro-pipeline {
+  overflow-x: auto;
+  padding: 0.9rem 1rem;
+  border-left: 0.2rem solid var(--md-accent-fg-color);
+  background: var(--md-code-bg-color);
+  font-family: var(--md-code-font-family);
+  white-space: nowrap;
+}

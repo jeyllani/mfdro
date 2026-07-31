@@ -1,0 +1,5 @@
+include *.md
+include mkdocs.yml
+recursive-include docs *.css *.md
+recursive-include examples *.ipynb *.md *.py
+recursive-include tests *.py

@@ -1,0 +1,83 @@
+site_name: MFDRO
+site_description: Point-in-time multi-frequency ambiguity signals for Wasserstein DRO
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.footer
+    - navigation.instant
+    - navigation.path
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: teal
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue grey
+      accent: teal
+
+nav:
+  - Home: index.md
+  - Start here:
+      - Getting started: getting-started.md
+      - End-to-end workflow: workflow.md
+      - Examples and notebooks: examples.md
+  - User guide:
+      - Data contract: data_contract.md
+      - Frequency configuration: frequency-configuration.md
+      - Choosing a configuration: choosing-configuration.md
+      - Understanding outputs: outputs.md
+      - Diagnostics and troubleshooting: troubleshooting.md
+      - Performance: performance.md
+  - Research guide:
+      - Signal definition: design.md
+      - Reproducibility: reproducibility.md
+      - Backtesting integration: backtesting.md
+      - Validation strategy: validation.md
+  - API reference:
+      - Configuration: api/configuration.md
+      - Preprocessing: api/preprocessing.md
+      - Signal engine: api/signal.md
+      - Exceptions: api/exceptions.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
+            members_order: source
+            merge_init_into_class: true
+            show_root_heading: true
+            show_signature_annotations: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+strict: true
+
+extra_css:
+  - stylesheets/extra.css

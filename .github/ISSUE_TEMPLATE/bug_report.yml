@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible package, numerical, or documentation defect.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach proprietary market data. Prefer a minimal synthetic reproducer.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Describe the observed behavior and its scientific or user impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: Provide executable code using synthetic or redistributable inputs.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: MFDRO version
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Python, NumPy, pandas, POT, and scikit-learn versions and the operating system.
+    validations:
+      required: true
+
+  - type: textarea
+    id: experiment
+    attributes:
+      label: Experiment identity
+      description: Include the configuration digest, effective seed, asset count, and sample sizes when available.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Data and timing checks
+      options:
+        - label: I verified the selected matrix is numeric, finite, and point-in-time.
+          required: true
+        - label: I removed credentials, licensed data, and other private information.
+          required: true
