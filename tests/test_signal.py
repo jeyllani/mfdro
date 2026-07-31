@@ -27,6 +27,25 @@ UNIT_FREQUENCY_SPECS = (
 
 
 class PointSignalTests(unittest.TestCase):
+    def test_signal_path_canonicalises_datetime_units_without_mutating_inputs(self) -> None:
+        config = SignalConfig(
+            frequency_specs=UNIT_FREQUENCY_SPECS,
+            barycenter="projected_quantile",
+        )
+
+        for timezone in (None, "Europe/Zurich"):
+            with self.subTest(timezone=timezone):
+                dates = pd.date_range("2020-01-31", periods=2, tz=timezone).as_unit("us")
+                estimates = pd.DataFrame({"date": dates})
+                audit = pd.DataFrame({"date": dates, "start_date": dates})
+
+                path = SignalPath(estimates=estimates, audit=audit, config=config)
+
+                self.assertTrue(str(path.estimates["date"].dtype).startswith("datetime64[ns"))
+                self.assertTrue(str(path.audit["start_date"].dtype).startswith("datetime64[ns"))
+                self.assertTrue(str(estimates["date"].dtype).startswith("datetime64[us"))
+                self.assertTrue(str(audit["start_date"].dtype).startswith("datetime64[us"))
+
     def test_estimator_and_result_container_reject_invalid_public_inputs(self) -> None:
         with self.assertRaises(TypeError):
             MultiFrequencySignal("invalid")  # type: ignore[arg-type]
