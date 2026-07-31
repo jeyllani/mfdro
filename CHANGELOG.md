@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Canonicalise result-table datetime units so portable artifacts round-trip
+  exactly across pandas 2 and pandas 3.
 - Replace the duplicate frequency interfaces with one canonical
   `frequency_specs` contract and rename the projected center to the explicit
   `projected_quantile` mode before the public API is released.

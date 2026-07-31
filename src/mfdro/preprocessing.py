@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .exceptions import DataContractError
-from .frequency import DEFAULT_FREQUENCY_SPECS, FrequencySpec
+from .frequency import DEFAULT_FREQUENCY_SPECS, FrequencySpec, Side
 
 
 def validate_daily_returns(daily_returns: pd.DataFrame) -> pd.DataFrame:
@@ -52,8 +52,8 @@ def compound_returns(
     rule: str,
     *,
     min_observations: int = 1,
-    closed: str | None = None,
-    label: str | None = None,
+    closed: Side | None = None,
+    label: Side | None = None,
     origin: str = "start_day",
     offset: str | None = None,
 ) -> pd.DataFrame:
