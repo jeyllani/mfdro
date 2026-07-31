@@ -45,12 +45,16 @@ def dispersion_weights(
 ) -> FloatArray:
     """Return positive frequency weights that sum exactly to one."""
 
+    raw: FloatArray
     if config.frequency_weighting == "uniform":
         raw = np.ones(len(arrays), dtype=np.float64)
     elif config.frequency_weighting == "sample_size":
         raw = np.asarray([len(array) for array in arrays], dtype=np.float64)
     elif config.frequency_weighting == "log_sample_size":
-        raw = np.log(np.asarray([len(array) for array in arrays], dtype=np.float64))
+        raw = np.asarray(
+            np.log(np.asarray([len(array) for array in arrays], dtype=np.float64)),
+            dtype=np.float64,
+        )
     else:
         if config.explicit_frequency_weights is None:  # pragma: no cover - config guard
             raise DataContractError("Explicit frequency weights are unavailable.")
@@ -61,6 +65,7 @@ def dispersion_weights(
 def barycenter_weights(config: SignalConfig) -> FloatArray:
     """Return barycenter measure weights; uniform is the reference convention."""
 
+    raw: FloatArray
     if config.barycenter_weights is None:
         raw = np.ones(len(config.frequencies), dtype=np.float64)
     else:
