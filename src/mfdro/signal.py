@@ -17,6 +17,7 @@ from typing import Literal, cast
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from pandas.api.types import is_datetime64_any_dtype
 
 from .config import SignalConfig
 from .exceptions import DataContractError
@@ -168,6 +169,9 @@ class SignalPath:
     skipped: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "estimates", _canonicalise_datetime_units(self.estimates))
+        object.__setattr__(self, "audit", _canonicalise_datetime_units(self.audit))
+        object.__setattr__(self, "skipped", _canonicalise_datetime_units(self.skipped))
         if len(self.estimates) != len(self.audit):
             raise ValueError("Signal and audit paths must have the same number of rows.")
         if (
@@ -1051,6 +1055,17 @@ def _frame_to_json(frame: pd.DataFrame) -> str:
     if payload is None:  # pragma: no cover - pandas returns text without a path
         raise RuntimeError("pandas did not return a JSON representation.")
     return payload + "\n"
+
+
+def _canonicalise_datetime_units(frame: pd.DataFrame) -> pd.DataFrame:
+    """Copy a result table and normalize datetime columns for portable equality."""
+
+    result = frame.copy()
+    for column in result.columns:
+        series = result[column]
+        if is_datetime64_any_dtype(series.dtype):
+            result[column] = series.dt.as_unit("ns")
+    return result
 
 
 def _frame_from_json(payload: str) -> pd.DataFrame:
