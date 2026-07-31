@@ -15,7 +15,8 @@ From the package root:
 
 ```bash
 python -m pip install -e ".[notebooks]"
-python -m jupyter lab examples/notebooks
+python -m pip install jupyterlab
+jupyter lab examples/notebooks
 ```
 
 Start with notebook 01 and continue in numerical order. The five offline

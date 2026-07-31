@@ -5,10 +5,22 @@ scientific purpose and remains small enough to audit cell by cell.
 
 ## Install notebook dependencies
 
+The notebooks are repository examples rather than installed package data.
+Clone the repository, then install the package and notebook dependencies in an
+isolated environment:
+
 ```bash
+git clone https://github.com/jeyllani/mfdro.git
+cd mfdro
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install -e ".[notebooks]"
-python -m jupyter lab examples/notebooks
+python -m pip install jupyterlab
+jupyter lab examples/notebooks
 ```
+
+The separate JupyterLab installation is needed only for the browser interface;
+VS Code and other notebook clients can use the installed kernel directly.
 
 ## Offline scientific sequence
 

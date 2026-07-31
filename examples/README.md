@@ -15,7 +15,10 @@ point-in-time controls, reproducible artifacts, and an optional Yahoo Finance
 case study. The five offline notebooks are executed in notebook CI; the network
 case study is syntax-checked but never downloaded there.
 
-Install their dependencies with `python -m pip install -e ".[notebooks]"`.
+From a repository clone, install their dependencies with
+`python -m pip install -e ".[notebooks]"`. Install `jupyterlab` separately when
+using its browser interface; VS Code and other notebook clients can use the
+installed kernel directly.
 
 Examples that require downloads should remain optional, document provider and
 retrieval time, and state adjustment, timezone, membership, and boundary

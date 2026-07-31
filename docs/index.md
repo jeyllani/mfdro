@@ -19,6 +19,15 @@ visible.
 daily returns → empirical frequency measures → common scale → barycenter → ρ and √ρ → audit trail
 </div>
 
+## Install
+
+```bash
+python -m pip install mfdro
+```
+
+MFDRO supports Python 3.10 and newer. See [Getting started](getting-started.md)
+for a pinned installation and a complete first estimate.
+
 ## What you get
 
 <div class="grid cards" markdown>
@@ -71,8 +80,8 @@ See the [end-to-end workflow](workflow.md) and [backtesting boundary](backtestin
 !!! warning "Alpha research software"
 
     The implementation is tested and typed, but the public API is not frozen
-    and the project has not yet been released on PyPI. Pin an exact version and
-    retain exported results for any research archive.
+    across minor releases. Pin an exact package version and retain exported
+    results for any research archive.
 
 ## Choose your next page
 

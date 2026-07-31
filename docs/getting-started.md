@@ -5,22 +5,31 @@ estimation, inspection, and export. No network or external dataset is needed.
 
 ## Install
 
-=== "Local source"
-
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    python -m pip install -e .
-    ```
-
-=== "PyPI (after the first release)"
+=== "PyPI"
 
     ```bash
     python -m pip install mfdro
     ```
 
-MFDRO requires Python 3.10 or newer. Install notebook dependencies with
-`python -m pip install -e ".[notebooks]"` when working from a clone.
+=== "Pinned release"
+
+    ```bash
+    python -m pip install "mfdro==0.1.0"
+    ```
+
+=== "Local source"
+
+    ```bash
+    git clone https://github.com/jeyllani/mfdro.git
+    cd mfdro
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install -e .
+    ```
+
+MFDRO requires Python 3.10 or newer. The editable installation is for
+contributors and repository examples; ordinary users should install the PyPI
+release.
 
 ## 1. Prepare daily simple returns
 

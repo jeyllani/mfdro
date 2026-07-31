@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-07-31
+
 - Canonicalise result-table datetime units so portable artifacts round-trip
   exactly across pandas 2 and pandas 3.
 - Replace the duplicate frequency interfaces with one canonical

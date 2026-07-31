@@ -1,5 +1,11 @@
 # MFDRO
 
+[![PyPI](https://img.shields.io/pypi/v/mfdro.svg)](https://pypi.org/project/mfdro/)
+[![Python](https://img.shields.io/pypi/pyversions/mfdro.svg)](https://pypi.org/project/mfdro/)
+[![Tests](https://github.com/jeyllani/mfdro/actions/workflows/tests.yml/badge.svg)](https://github.com/jeyllani/mfdro/actions/workflows/tests.yml)
+[![Documentation](https://github.com/jeyllani/mfdro/actions/workflows/pages.yml/badge.svg)](https://jeyllani.github.io/mfdro/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 MFDRO estimates reproducible, point-in-time disagreement between multivariate
 return distributions observed at multiple frequencies. It constructs empirical
 measures, places them on comparable scales, estimates a Wasserstein center, and
@@ -7,8 +13,8 @@ returns a non-negative squared dispersion `rho` together with a complete audit
 trail.
 
 > **Status:** alpha research software. The numerical core is tested, but the
-> public API is not yet frozen and the project has not yet been released on
-> PyPI.
+> public API is not yet frozen. Pin an exact version when preserving a research
+> environment.
 
 ## Why MFDRO
 
@@ -29,23 +35,25 @@ backtesting system a research project chooses.
 
 ## Installation
 
-From a local clone:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-```
-
-After the first PyPI release:
+Install the released package from PyPI:
 
 ```bash
 python -m pip install mfdro
 ```
 
-For the bundled notebooks:
+For a reproducible environment, pin the release:
 
 ```bash
+python -m pip install "mfdro==0.1.0"
+```
+
+Clone the repository only when working with the bundled notebooks or source:
+
+```bash
+git clone https://github.com/jeyllani/mfdro.git
+cd mfdro
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install -e ".[notebooks]"
 ```
 

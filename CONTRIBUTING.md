@@ -5,8 +5,11 @@ interoperability are welcome once the public repository is opened.
 
 ## Development environment
 
+Use Python 3.12 for the maintainer quality environment. The full supported
+Python range is exercised separately by the CI test matrix.
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/jeyllani/mfdro.git
 cd mfdro
 python -m venv .venv
 source .venv/bin/activate

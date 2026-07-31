@@ -108,7 +108,9 @@ show_missing = true
 skip_covered = true
 
 [tool.mypy]
-python_version = "3.10"
+# Current NumPy stubs use Python 3.12 typing syntax. Python 3.10 runtime
+# compatibility is enforced separately by Ruff and the CI test matrix.
+python_version = "3.12"
 packages = ["mfdro"]
 strict = true
 warn_unreachable = true

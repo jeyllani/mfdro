@@ -20,8 +20,8 @@ Publishing. Do not upload a locally built `dist/` directory.
 3. Set one new PEP 440 version in `src/mfdro/__init__.py`.
 4. Run all commands in `CONTRIBUTING.md`.
 5. Commit and merge through the protected default branch.
-6. Run the TestPyPI workflow and install the uploaded package in a clean
-   environment.
+6. Run the TestPyPI workflow. In a clean environment, install dependencies from
+   PyPI and install the exact MFDRO release from TestPyPI with `--no-deps`.
 7. Create an annotated tag `vX.Y.Z` matching the package version.
 8. Create a GitHub release from that tag.
 9. Approve the protected PyPI environment after the release workflow validates
