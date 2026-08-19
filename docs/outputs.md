@@ -14,6 +14,7 @@ was constructed as requested.
 | `seed` | Effective uint32 seed used by projected calculations |
 | `config_digest` | SHA-256 identity of the complete `SignalConfig` |
 | `frequency_weights` | Normalized dispersion weights, in configured order |
+| `frequency_squared_distances` | Unweighted squared distance from each frequency to the configured center |
 | `barycenter_weights` | Normalized center weights, in configured order |
 | `sample_sizes` | Observation count for every empirical measure |
 | `n_assets` | Shared multivariate dimension |
@@ -27,14 +28,24 @@ was constructed as requested.
 
 `estimate_path` returns `SignalPath` with three tables.
 
+Newly written paths use persistence format version 2.
+
 ### `estimates`
 
 One row per successful formation. Alongside `rho`, `sqrt_rho`, seed, config
 identity, and asset count, every frequency contributes:
 
+- `distance2_<name>`: unweighted squared distance from that frequency to the
+  configured center, before aggregation by `lambda_<name>`;
 - `lambda_<name>`: normalized dispersion weight;
 - `barycenter_lambda_<name>`: normalized center weight;
 - `n_<name>`: empirical sample size.
+
+The aggregate is recoverable from the component columns:
+
+\[
+\rho_t = \sum_k \lambda_{k,t}\,d^2_{k,t}.
+\]
 
 Convenience views return copies:
 
@@ -96,8 +107,14 @@ path/
 
 The manifest records the path-format version, package version, row counts,
 configuration digest, and a SHA-256 checksum for each payload. Loading verifies
-checksums, schema, row alignment, and configuration identity before returning
-an object.
+checksums, declared row counts, schema, row alignment, and configuration
+identity before returning an object.
+
+MFDRO 0.2 reads paths written by MFDRO 0.1 in format 1. Those files predate
+frequency-level distances, so their migrated `distance2_<name>` values are
+`NaN`; the aggregate `rho` and all historical fields remain unchanged. Saving
+the loaded object produces format 2. Missing components are never inferred
+from the aggregate.
 
 The JSON-table format is portable and avoids pickle deserialization. For a
 long-lived archive, also retain source-data identities and the complete Python

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import unittest
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -13,6 +15,7 @@ from mfdro import (
     MultiFrequencySignal,
     PathProgress,
     SignalConfig,
+    SignalEstimate,
     SignalPath,
     SkipReason,
 )
@@ -27,6 +30,25 @@ UNIT_FREQUENCY_SPECS = (
 
 
 class PointSignalTests(unittest.TestCase):
+    def test_new_component_field_preserves_legacy_support_position(self) -> None:
+        support = np.array([[0.0]])
+        estimate = SignalEstimate(
+            0.0,
+            0.0,
+            0,
+            "digest",
+            ("daily",),
+            (1.0,),
+            (1.0,),
+            (2,),
+            1,
+            None,
+            support,
+        )
+
+        self.assertIs(estimate.support, support)
+        self.assertEqual(estimate.frequency_squared_distances, ())
+
     def test_signal_path_canonicalises_datetime_units_without_mutating_inputs(self) -> None:
         config = SignalConfig(
             frequency_specs=UNIT_FREQUENCY_SPECS,
@@ -92,6 +114,17 @@ class PointSignalTests(unittest.TestCase):
         result = MultiFrequencySignal(config).estimate(measures)
 
         self.assertAlmostEqual(result.rho, 2.0 / 3.0, places=14)
+        np.testing.assert_allclose(
+            result.frequency_squared_distances,
+            np.array([1.0, 0.0, 1.0]),
+            rtol=0,
+            atol=1e-14,
+        )
+        self.assertAlmostEqual(
+            result.rho,
+            float(np.dot(result.frequency_weights, result.frequency_squared_distances)),
+            places=14,
+        )
         self.assertAlmostEqual(result.sqrt_rho**2, result.rho, places=14)
         self.assertEqual(result.to_series().name, "signal_estimate")
         self.assertEqual(float(result.to_series()["rho"]), result.rho)
@@ -354,6 +387,50 @@ class SignalPathTests(unittest.TestCase):
             with self.assertRaises(DataContractError):
                 SignalPath.load(destination)
 
+    def test_format_one_path_is_loaded_with_unknown_frequency_distances(self) -> None:
+        path = self.engine().estimate_path(self.daily_panel(), lookback_months=2)
+
+        with TemporaryDirectory() as directory:
+            destination = path.save(Path(directory, "format-one"))
+            estimates_path = destination / "estimates.json"
+            estimates = pd.read_json(StringIO(estimates_path.read_text()), orient="table")
+            distance_columns = [f"distance2_{frequency}" for frequency in path.config.frequencies]
+            legacy_estimates = estimates.drop(columns=distance_columns)
+            estimates_payload = legacy_estimates.to_json(
+                orient="table",
+                date_format="iso",
+                date_unit="ns",
+                index=False,
+            )
+            assert estimates_payload is not None
+            estimates_payload += "\n"
+            estimates_path.write_text(estimates_payload, encoding="utf-8")
+
+            manifest_path = destination / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["format_version"] = 1
+            manifest["package_version"] = "0.1.0"
+            manifest["sha256"]["estimates.json"] = hashlib.sha256(
+                estimates_payload.encode("utf-8")
+            ).hexdigest()
+            manifest_path.write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            loaded = SignalPath.load(destination)
+
+            self.assertEqual(loaded.estimates.columns.tolist(), path.estimates.columns.tolist())
+            self.assertTrue(loaded.estimates[distance_columns].isna().all().all())
+            pd.testing.assert_frame_equal(
+                loaded.estimates.drop(columns=distance_columns),
+                path.estimates.drop(columns=distance_columns),
+            )
+            upgraded = loaded.save(Path(directory, "format-two"))
+            upgraded_manifest = json.loads((upgraded / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(upgraded_manifest["format_version"], 2)
+            pd.testing.assert_frame_equal(SignalPath.load(upgraded).estimates, loaded.estimates)
+
     def test_path_persistence_rejects_invalid_destinations_and_manifests(self) -> None:
         path = self.engine().estimate_path(self.daily_panel(), lookback_months=2)
 
@@ -365,7 +442,12 @@ class SignalPathTests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 path.save(Path(directory, "result"), overwrite=1)  # type: ignore[arg-type]
 
-        invalid_manifests: list[object] = [[], {"format_version": 999}, {"format_version": 1}]
+        invalid_manifests: list[object] = [
+            [],
+            {"format_version": 999},
+            {"format_version": True},
+            {"format_version": 2.0},
+        ]
         for manifest in invalid_manifests:
             with self.subTest(manifest=manifest), TemporaryDirectory() as directory:
                 destination = path.save(Path(directory, "result"))
@@ -375,6 +457,15 @@ class SignalPathTests(unittest.TestCase):
                 )
                 with self.assertRaises(DataContractError):
                     SignalPath.load(destination)
+
+        with TemporaryDirectory() as directory:
+            destination = path.save(Path(directory, "wrong-row-count"))
+            manifest_path = destination / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["rows"]["estimates"] += 1
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaises(DataContractError):
+                SignalPath.load(destination)
 
         with TemporaryDirectory() as directory:
             destination = Path(directory, "missing")
@@ -457,12 +548,15 @@ class SignalPathTests(unittest.TestCase):
                 "seed",
                 "config_digest",
                 "n_assets",
+                "distance2_daily",
                 "lambda_daily",
                 "barycenter_lambda_daily",
                 "n_daily",
+                "distance2_weekly",
                 "lambda_weekly",
                 "barycenter_lambda_weekly",
                 "n_weekly",
+                "distance2_monthly",
                 "lambda_monthly",
                 "barycenter_lambda_monthly",
                 "n_monthly",

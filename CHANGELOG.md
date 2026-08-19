@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-08-19
+
+- Expose each frequency's unweighted squared distance to the configured center
+  alongside the aggregate multi-frequency dispersion; persisted signal paths
+  now use format version 2.
+- Preserve read compatibility with format-1 signal paths. Their unavailable
+  frequency distances are represented explicitly as missing values and become
+  format 2 when saved again.
+- Verify persisted row counts during loading and extend analytical component
+  invariants across projected, sliced, and exact transport calculations.
+
 ## 0.1.0 - 2026-07-31
 
 - Canonicalise result-table datetime units so portable artifacts round-trip

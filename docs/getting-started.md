@@ -14,7 +14,7 @@ estimation, inspection, and export. No network or external dataset is needed.
 === "Pinned release"
 
     ```bash
-    python -m pip install "mfdro==0.1.0"
+    python -m pip install "mfdro==0.2.0"
     ```
 
 === "Local source"
@@ -114,12 +114,16 @@ The complete evidence remains in three stable tables:
 
 | Attribute | Contents |
 |---|---|
-| `path.estimates` | `rho`, `sqrt_rho`, weights, seeds, sample sizes, and config identity |
+| `path.estimates` | `rho`, `sqrt_rho`, frequency distances, weights, seeds, sample sizes, and config identity |
 | `path.audit` | Window boundaries, asset identity, matrix checks, and sample sizes |
 | `path.skipped` | Requested formations not estimated, with reason and detail |
 
 ```python
-print(path.estimates[["date", "rho", "sqrt_rho"]].tail())
+print(
+    path.estimates[
+        ["date", "rho", "sqrt_rho", "distance2_daily", "distance2_weekly", "distance2_monthly"]
+    ].tail()
+)
 print(path.audit[["date", "n_daily", "n_weekly", "n_monthly"]].tail())
 print(path.skipped[["date", "reason"]].head())
 ```
@@ -157,6 +161,7 @@ estimate = engine.estimate(
 )
 
 print(estimate.rho)
+print(estimate.frequency_squared_distances)
 print(estimate.to_series())
 ```
 

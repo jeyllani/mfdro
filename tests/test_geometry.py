@@ -10,9 +10,14 @@ from mfdro.geometry import (
     barycenter_weights,
     dispersion_weights,
     exact_dispersion,
+    exact_dispersion_with_components,
     initial_support,
+    projected_quantile_dispersion,
+    projected_quantile_dispersion_with_components,
     random_directions,
     scale_measures,
+    sliced_dispersion,
+    sliced_dispersion_with_components,
 )
 
 
@@ -108,6 +113,59 @@ class GeometryInvariantTests(unittest.TestCase):
         result = exact_dispersion(arrays, support, np.array([0.25, 0.75]))
 
         self.assertAlmostEqual(result, 3.25, places=15)
+
+    def test_every_geometry_exposes_components_that_reconstruct_rho(self) -> None:
+        arrays = (
+            np.array([[0.0], [0.0]]),
+            np.array([[1.0], [1.0]]),
+            np.array([[2.0], [2.0]]),
+        )
+        support = np.array([[1.0], [1.0]])
+        weights = np.array([0.2, 0.3, 0.5])
+        center_weights = np.full(3, 1.0 / 3.0)
+        config = SignalConfig(
+            frequency_specs=(
+                FrequencySpec("short", 1.0),
+                FrequencySpec("medium", 1.0, rule="W-FRI"),
+                FrequencySpec("long", 1.0, rule="ME"),
+            ),
+            barycenter="projected_quantile",
+            n_projections=7,
+            n_quantiles=9,
+        )
+        cases = {
+            "projected_quantile": (
+                projected_quantile_dispersion_with_components(
+                    arrays,
+                    weights,
+                    center_weights,
+                    config,
+                    17,
+                ),
+                projected_quantile_dispersion(
+                    arrays,
+                    weights,
+                    center_weights,
+                    config,
+                    17,
+                ),
+            ),
+            "free_support_sliced": (
+                sliced_dispersion_with_components(arrays, support, weights, config, 17),
+                sliced_dispersion(arrays, support, weights, config, 17),
+            ),
+            "free_support_exact": (
+                exact_dispersion_with_components(arrays, support, weights),
+                exact_dispersion(arrays, support, weights),
+            ),
+        }
+
+        for name, ((rho, components), legacy_rho) in cases.items():
+            with self.subTest(name=name):
+                np.testing.assert_allclose(components, np.array([1.0, 0.0, 1.0]))
+                self.assertAlmostEqual(rho, 0.7, places=14)
+                self.assertAlmostEqual(rho, float(np.dot(weights, components)), places=14)
+                self.assertEqual(legacy_rho, rho)
 
     def test_random_directions_are_seeded_unit_vectors(self) -> None:
         first = random_directions(17, 4, 123)

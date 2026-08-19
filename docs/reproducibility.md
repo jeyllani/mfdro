@@ -60,15 +60,20 @@ version, row counts, and checksums. `SignalPath.load("path")` verifies those
 artifacts before loading them. This detects accidental file changes; it is not
 a cryptographic signature of the researcher or source vendor.
 
+Version 0.2 reads both path formats 1 and 2. A format-1 archive has no stored
+frequency-level distances; loading preserves that fact with `NaN` component
+values rather than reconstructing information that was never persisted.
+Saving the migrated path writes format 2.
+
 ## Environment boundary
 
 A configuration digest identifies scientific choices, not third-party
 numerical implementations. Exact archival reproduction should also retain the
 MFDRO version, Python version, and dependency environment.
 
-Configuration and path formats have separate schema versions. A future package
-may require an explicit migration for an old artifact rather than silently
-guessing its meaning.
+Configuration and path formats have separate schema versions. Compatibility is
+explicit: unsupported future formats fail rather than being interpreted by
+guesswork.
 
 ## What MFDRO cannot prove
 

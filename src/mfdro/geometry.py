@@ -162,19 +162,39 @@ def sliced_dispersion(
 ) -> float:
     """Estimate weighted sliced-Wasserstein squared dispersion."""
 
+    rho, _ = sliced_dispersion_with_components(arrays, support, weights, config, seed)
+    return rho
+
+
+def sliced_dispersion_with_components(
+    arrays: Sequence[FloatArray],
+    support: FloatArray,
+    weights: FloatArray,
+    config: SignalConfig,
+    seed: int,
+) -> tuple[float, FloatArray]:
+    """Estimate aggregate dispersion and each unweighted squared distance."""
+
     quantile_grid = np.linspace(0.0, 1.0, config.n_quantiles)
     directions = random_directions(config.n_projections, arrays[0].shape[1], seed)
     total = 0.0
+    component_totals = np.zeros(len(arrays), dtype=np.float64)
     for direction in directions:
         barycenter_quantiles = np.quantile(support @ direction, quantile_grid)
-        total += sum(
-            weights[index]
-            * float(
+        distances = np.asarray(
+            [
                 np.mean((np.quantile(array @ direction, quantile_grid) - barycenter_quantiles) ** 2)
-            )
-            for index, array in enumerate(arrays)
+                for array in arrays
+            ],
+            dtype=np.float64,
         )
-    return _clean_nonnegative(total / config.n_projections)
+        component_totals += distances
+        total += sum(weights[index] * float(distances[index]) for index in range(len(arrays)))
+    components = component_totals / config.n_projections
+    return (
+        _clean_nonnegative(total / config.n_projections),
+        np.asarray([_clean_nonnegative(float(value)) for value in components]),
+    )
 
 
 def projected_quantile_dispersion(
@@ -186,19 +206,45 @@ def projected_quantile_dispersion(
 ) -> float:
     """Estimate dispersion around direction-wise projected quantile barycenters."""
 
+    rho, _ = projected_quantile_dispersion_with_components(
+        arrays,
+        weights,
+        measure_weights,
+        config,
+        seed,
+    )
+    return rho
+
+
+def projected_quantile_dispersion_with_components(
+    arrays: Sequence[FloatArray],
+    weights: FloatArray,
+    measure_weights: FloatArray,
+    config: SignalConfig,
+    seed: int,
+) -> tuple[float, FloatArray]:
+    """Estimate projected dispersion and each unweighted squared distance."""
+
     quantile_grid = np.linspace(0.0, 1.0, config.n_quantiles)
     directions = random_directions(config.n_projections, arrays[0].shape[1], seed)
     total = 0.0
+    component_totals = np.zeros(len(arrays), dtype=np.float64)
     for direction in directions:
         quantiles = [np.quantile(array @ direction, quantile_grid) for array in arrays]
         barycenter_quantiles = sum(
             measure_weights[index] * quantile for index, quantile in enumerate(quantiles)
         )
-        total += sum(
-            weights[index] * float(np.mean((quantile - barycenter_quantiles) ** 2))
-            for index, quantile in enumerate(quantiles)
+        distances = np.asarray(
+            [np.mean((quantile - barycenter_quantiles) ** 2) for quantile in quantiles],
+            dtype=np.float64,
         )
-    return _clean_nonnegative(total / config.n_projections)
+        component_totals += distances
+        total += sum(weights[index] * float(distances[index]) for index in range(len(arrays)))
+    components = component_totals / config.n_projections
+    return (
+        _clean_nonnegative(total / config.n_projections),
+        np.asarray([_clean_nonnegative(float(value)) for value in components]),
+    )
 
 
 def exact_dispersion(
@@ -208,13 +254,30 @@ def exact_dispersion(
 ) -> float:
     """Compute weighted exact discrete squared-Wasserstein dispersion."""
 
+    rho, _ = exact_dispersion_with_components(arrays, support, weights)
+    return rho
+
+
+def exact_dispersion_with_components(
+    arrays: Sequence[FloatArray],
+    support: FloatArray,
+    weights: FloatArray,
+) -> tuple[float, FloatArray]:
+    """Compute exact aggregate dispersion and each unweighted squared distance."""
+
     support_weights = np.full(len(support), 1.0 / len(support))
     total = 0.0
+    components: list[float] = []
     for index, array in enumerate(arrays):
         observation_weights = np.full(len(array), 1.0 / len(array))
         cost = ot.dist(support, array, metric="sqeuclidean")
-        total += weights[index] * float(ot.emd2(support_weights, observation_weights, cost))
-    return _clean_nonnegative(total)
+        distance = float(ot.emd2(support_weights, observation_weights, cost))
+        components.append(distance)
+        total += weights[index] * distance
+    return (
+        _clean_nonnegative(total),
+        np.asarray([_clean_nonnegative(value) for value in components]),
+    )
 
 
 def _normalise_weights(raw: FloatArray) -> FloatArray:

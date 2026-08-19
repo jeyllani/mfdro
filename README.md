@@ -44,7 +44,7 @@ python -m pip install mfdro
 For a reproducible environment, pin the release:
 
 ```bash
-python -m pip install "mfdro==0.1.0"
+python -m pip install "mfdro==0.2.0"
 ```
 
 Clone the repository only when working with the bundled notebooks or source:
