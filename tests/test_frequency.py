@@ -187,6 +187,7 @@ class MultiFrequencyPipelineTests(unittest.TestCase):
         self.assertEqual(len(path.estimates), 25)
         for name in ("daily", "weekly", "biweekly", "monthly", "quarterly"):
             self.assertIn(f"n_{name}", path.audit.columns)
+            self.assertIn(f"distance2_{name}", path.estimates.columns)
             self.assertIn(f"lambda_{name}", path.estimates.columns)
         self.assertTrue(path.audit["no_future_observations"].all())
         self.assertTrue(path.audit["matrix_is_full"].all())

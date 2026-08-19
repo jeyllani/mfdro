@@ -24,18 +24,19 @@ from .exceptions import DataContractError
 from .geometry import (
     barycenter_weights,
     dispersion_weights,
-    exact_dispersion,
+    exact_dispersion_with_components,
     free_support_barycenter,
-    projected_quantile_dispersion,
+    projected_quantile_dispersion_with_components,
     scale_measures,
-    sliced_dispersion,
+    sliced_dispersion_with_components,
 )
 from .preprocessing import build_frequency_measures
 from .random import stable_seed, validate_seed
 from .validation import prepare_measures
 
 FloatArray = NDArray[np.float64]
-PATH_FORMAT_VERSION = 1
+PATH_FORMAT_VERSION = 2
+SUPPORTED_PATH_FORMAT_VERSIONS = frozenset({1, PATH_FORMAT_VERSION})
 
 
 class SkipReason(str, Enum):
@@ -65,8 +66,10 @@ class SignalEstimate:
     """Auditable result of one multi-frequency signal estimate.
 
     ``rho`` is the configured squared dispersion and ``sqrt_rho`` its square
-    root. The remaining fields identify the numerical experiment. ``support``
-    is returned only when requested for a free-support estimate.
+    root. ``frequency_squared_distances`` retains the unweighted distance from
+    each frequency to the configured center. The remaining fields identify the
+    numerical experiment. ``support`` is returned only when requested for a
+    free-support estimate.
     """
 
     rho: float
@@ -80,6 +83,7 @@ class SignalEstimate:
     n_assets: int
     asset_labels: tuple[object, ...] | None
     support: FloatArray | None = field(default=None, repr=False, compare=False)
+    frequency_squared_distances: tuple[float, ...] = field(default=(), repr=False)
 
     def to_record(self) -> dict[str, object]:
         """Flatten the estimate into a machine-readable record."""
@@ -92,6 +96,8 @@ class SignalEstimate:
             "n_assets": self.n_assets,
         }
         for index, frequency in enumerate(self.frequencies):
+            if self.frequency_squared_distances:
+                record[f"distance2_{frequency}"] = self.frequency_squared_distances[index]
             record[f"lambda_{frequency}"] = self.frequency_weights[index]
             record[f"barycenter_lambda_{frequency}"] = self.barycenter_weights[index]
             record[f"n_{frequency}"] = self.sample_sizes[index]
@@ -305,7 +311,12 @@ class SignalPath:
 
     @classmethod
     def load(cls, directory: str | Path) -> SignalPath:
-        """Load and integrity-check a path written by :meth:`save`."""
+        """Load and integrity-check a path written by :meth:`save`.
+
+        Format-1 paths remain readable. Their per-frequency distances cannot
+        be reconstructed from the aggregate signal, so the migrated columns
+        contain ``NaN``. Saving the returned object writes the current format.
+        """
 
         source = Path(directory).expanduser().resolve()
         manifest_path = source.joinpath("manifest.json")
@@ -315,9 +326,14 @@ class SignalPath:
             raise DataContractError("Signal path manifest is missing or invalid.") from exc
         if not isinstance(manifest, Mapping):
             raise DataContractError("Signal path manifest must contain one object.")
-        if manifest.get("format_version") != PATH_FORMAT_VERSION:
+        raw_format_version = manifest.get("format_version")
+        if (
+            isinstance(raw_format_version, bool)
+            or not isinstance(raw_format_version, int)
+            or raw_format_version not in SUPPORTED_PATH_FORMAT_VERSIONS
+        ):
             raise DataContractError(
-                f"Unsupported signal path format version: {manifest.get('format_version')!r}."
+                f"Unsupported signal path format version: {raw_format_version!r}."
             )
         raw_hashes = manifest.get("sha256")
         if not isinstance(raw_hashes, Mapping):
@@ -338,11 +354,20 @@ class SignalPath:
         config = SignalConfig.from_json(payloads["config.json"])
         if manifest.get("config_digest") != config.digest:
             raise DataContractError("Signal path configuration digest does not match its manifest.")
+        estimates = _frame_from_json(payloads["estimates.json"])
+        audit = _frame_from_json(payloads["audit.json"])
+        skipped = _frame_from_json(payloads["skipped.json"])
+        _validate_manifest_rows(
+            manifest,
+            {"estimates": estimates, "audit": audit, "skipped": skipped},
+        )
+        if raw_format_version == 1:
+            estimates = _upgrade_v1_estimates(estimates, config.frequencies)
         result = cls(
-            estimates=_frame_from_json(payloads["estimates.json"]),
-            audit=_frame_from_json(payloads["audit.json"]),
+            estimates=estimates,
+            audit=audit,
             config=config,
-            skipped=_frame_from_json(payloads["skipped.json"]),
+            skipped=skipped,
         )
         _validate_loaded_path(result)
         return result
@@ -425,7 +450,7 @@ class MultiFrequencySignal:
 
         support: FloatArray | None = None
         if self.config.barycenter == "projected_quantile":
-            rho = projected_quantile_dispersion(
+            rho, squared_distances = projected_quantile_dispersion_with_components(
                 arrays,
                 weights,
                 center_weights,
@@ -435,7 +460,7 @@ class MultiFrequencySignal:
         else:
             support = free_support_barycenter(arrays, self.config, center_weights)
             if self.config.distance == "sliced":
-                rho = sliced_dispersion(
+                rho, squared_distances = sliced_dispersion_with_components(
                     arrays,
                     support,
                     weights,
@@ -443,7 +468,11 @@ class MultiFrequencySignal:
                     effective_seed,
                 )
             else:
-                rho = exact_dispersion(arrays, support, weights)
+                rho, squared_distances = exact_dispersion_with_components(
+                    arrays,
+                    support,
+                    weights,
+                )
 
         if not math.isfinite(rho) or rho < 0:
             raise RuntimeError("Signal estimation did not produce a finite non-negative value.")
@@ -454,6 +483,7 @@ class MultiFrequencySignal:
             config_digest=self.config.digest,
             frequencies=self.config.frequencies,
             frequency_weights=tuple(float(value) for value in weights),
+            frequency_squared_distances=tuple(float(value) for value in squared_distances),
             barycenter_weights=tuple(float(value) for value in center_weights),
             sample_sizes=prepared.sample_sizes,
             n_assets=prepared.n_assets,
@@ -961,12 +991,21 @@ def _estimate_columns(frequencies: Sequence[str]) -> list[str]:
     for frequency in frequencies:
         columns.extend(
             [
+                f"distance2_{frequency}",
                 f"lambda_{frequency}",
                 f"barycenter_lambda_{frequency}",
                 f"n_{frequency}",
             ]
         )
     return columns
+
+
+def _estimate_columns_v1(frequencies: Sequence[str]) -> list[str]:
+    """Return the historical format-1 estimate schema."""
+
+    return [
+        column for column in _estimate_columns(frequencies) if not column.startswith("distance2_")
+    ]
 
 
 def _audit_columns(frequencies: Sequence[str]) -> list[str]:
@@ -1090,6 +1129,36 @@ def _validate_loaded_path(path: SignalPath) -> None:
             raise DataContractError(f"Persisted {name} columns do not match the configuration.")
         if not frame.empty and not frame["config_digest"].eq(path.config.digest).all():
             raise DataContractError(f"Persisted {name} rows contain another configuration digest.")
+
+
+def _validate_manifest_rows(
+    manifest: Mapping[str, object],
+    frames: Mapping[str, pd.DataFrame],
+) -> None:
+    raw_rows = manifest.get("rows")
+    if not isinstance(raw_rows, Mapping):
+        raise DataContractError("Signal path manifest does not contain row counts.")
+    if set(raw_rows) != set(frames):
+        raise DataContractError("Signal path manifest row-count fields are invalid.")
+    for name, frame in frames.items():
+        expected = raw_rows.get(name)
+        if isinstance(expected, bool) or not isinstance(expected, Integral):
+            raise DataContractError(f"Signal path row count is invalid for {name}.")
+        if int(expected) != len(frame):
+            raise DataContractError(f"Signal path row count differs for {name}.")
+
+
+def _upgrade_v1_estimates(
+    estimates: pd.DataFrame,
+    frequencies: Sequence[str],
+) -> pd.DataFrame:
+    expected = _estimate_columns_v1(frequencies)
+    if estimates.columns.tolist() != expected:
+        raise DataContractError("Persisted estimates columns do not match format version 1.")
+    migrated = estimates.copy()
+    for frequency in frequencies:
+        migrated[f"distance2_{frequency}"] = np.nan
+    return migrated.loc[:, _estimate_columns(frequencies)]
 
 
 def _package_version() -> str:
